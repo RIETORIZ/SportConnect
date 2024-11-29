@@ -3,7 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'coach.dart'; // Import coach.dart
 import 'login.dart'; // Ensure login.dart is in the same lib directory
+import 'renter.dart'; // Import renter.dart
 
 void main() {
   runApp(const SportConnectApp());
@@ -19,6 +21,7 @@ class SportConnectApp extends StatefulWidget {
 class _SportConnectAppState extends State<SportConnectApp> {
   ThemeMode _themeMode = ThemeMode.system;
   bool _isLoggedIn = false;
+  String _userRole = ''; // 'Player', 'Coach', 'Renter'
   String _loggedInEmail = '';
 
   @override
@@ -32,6 +35,7 @@ class _SportConnectAppState extends State<SportConnectApp> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
       _isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+      _userRole = prefs.getString('userRole') ?? '';
       _loggedInEmail = prefs.getString('loggedInEmail') ?? '';
     });
   }
@@ -42,14 +46,16 @@ class _SportConnectAppState extends State<SportConnectApp> {
     });
   }
 
-  // Handle user login
-  Future<void> _handleLogin(String email) async {
+  // Handle user login with email and role
+  Future<void> _handleLogin(String email, String role) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isLoggedIn', true);
     await prefs.setString('loggedInEmail', email);
+    await prefs.setString('userRole', role);
     setState(() {
       _isLoggedIn = true;
       _loggedInEmail = email;
+      _userRole = role;
     });
   }
 
@@ -58,14 +64,47 @@ class _SportConnectAppState extends State<SportConnectApp> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isLoggedIn', false);
     await prefs.remove('loggedInEmail');
+    await prefs.remove('userRole');
     setState(() {
       _isLoggedIn = false;
       _loggedInEmail = '';
+      _userRole = '';
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    Widget homeWidget;
+
+    if (_isLoggedIn) {
+      if (_userRole == 'Player') {
+        homeWidget = HomeScreen(
+          onThemeChanged: _changeThemeMode,
+          onLogout: _handleLogout,
+          loggedInEmail: _loggedInEmail,
+        );
+      } else if (_userRole == 'Coach') {
+        homeWidget = CoachScreen(
+          onThemeChanged: _changeThemeMode,
+          onLogout: _handleLogout,
+          loggedInEmail: _loggedInEmail,
+        );
+      } else if (_userRole == 'Renter') {
+        homeWidget = RenterScreen(
+          onThemeChanged: _changeThemeMode,
+          onLogout: _handleLogout,
+          loggedInEmail: _loggedInEmail,
+        );
+      } else {
+        // For other roles, you can define their home screens
+        homeWidget = const Center(child: Text('Unknown Role'));
+      }
+    } else {
+      homeWidget = LoginScreen(
+        onLogin: _handleLogin,
+      );
+    }
+
     return MaterialApp(
       title: 'SportConnect',
       theme: ThemeData(
@@ -84,15 +123,7 @@ class _SportConnectAppState extends State<SportConnectApp> {
       ),
       darkTheme: ThemeData.dark(),
       themeMode: _themeMode,
-      home: _isLoggedIn
-          ? HomeScreen(
-              onThemeChanged: _changeThemeMode,
-              onLogout: _handleLogout,
-              loggedInEmail: _loggedInEmail,
-            )
-          : LoginScreen(
-              onLogin: _handleLogin,
-            ),
+      home: homeWidget,
     );
   }
 }
@@ -214,35 +245,35 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       drawer: _buildDrawer(),
       body: _widgetOptions.elementAt(_selectedIndex),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.sports_soccer),
-            label: 'Sportfields',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.sports_score),
-            label: 'Matches',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.group), // Corrected from Icons.group_search
-            label: 'Team Search',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.fitness_center),
-            label: 'Training',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.message),
-            label: 'DM',
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Colors.yellowAccent,
-        unselectedItemColor: Colors.white,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed, // To show all labels
-      ),
+bottomNavigationBar: BottomNavigationBar(
+  items: const <BottomNavigationBarItem>[
+    BottomNavigationBarItem(
+      icon: Icon(Icons.sports_soccer),
+      label: 'Sportfields',
+    ),
+    BottomNavigationBarItem(
+      icon: Icon(Icons.sports_score),
+      label: 'Matches',
+    ),
+    BottomNavigationBarItem(
+      icon: Icon(Icons.group),
+      label: 'Team Search',
+    ),
+    BottomNavigationBarItem(
+      icon: Icon(Icons.fitness_center),
+      label: 'Training',
+    ),
+    BottomNavigationBarItem(
+      icon: Icon(Icons.message),
+      label: 'DM',
+    ),
+  ],
+  currentIndex: _selectedIndex,
+  selectedItemColor: Colors.green, // Player selected color
+  unselectedItemColor: Colors.grey, // Unselected color remains grey
+  onTap: _onItemTapped,
+  type: BottomNavigationBarType.fixed, // To show all labels
+),
     );
   }
 }
