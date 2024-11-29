@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatelessWidget {
-  final Function(String) onLogin;
+  final Function(String, String) onLogin; // Updated to accept email and role
 
   const LoginScreen({super.key, required this.onLogin});
 
@@ -18,36 +18,40 @@ class LoginScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Login as Player
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
                 foregroundColor: Colors.black,
                 minimumSize: const Size(200, 50),
               ),
-              onPressed: () => onLogin('player@sportconnect.com'),
+              onPressed: () => onLogin('player@sportconnect.com', 'Player'),
               child: const Text('Login as Player'),
             ),
             const SizedBox(height: 10),
+            // Login as Coach
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange,
                 foregroundColor: Colors.black,
                 minimumSize: const Size(200, 50),
               ),
-              onPressed: () => onLogin('coach@sportconnect.com'),
+              onPressed: () => onLogin('coach@sportconnect.com', 'Coach'),
               child: const Text('Login as Coach'),
             ),
             const SizedBox(height: 10),
+            // Login as Renter
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.yellow,
                 foregroundColor: Colors.black,
                 minimumSize: const Size(200, 50),
               ),
-              onPressed: () => onLogin('renter@sportconnect.com'),
+              onPressed: () => onLogin('renter@sportconnect.com', 'Renter'),
               child: const Text('Login as Renter'),
             ),
             const SizedBox(height: 20),
+            // Navigate to Register Screen
             TextButton(
               onPressed: () {
                 // Navigate to the Register screen
@@ -111,11 +115,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Registration Header
             const Text(
               'Register a new account',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
+            // Email Input
             TextField(
               controller: _emailController,
               decoration: const InputDecoration(
@@ -125,6 +131,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 20),
+            // Role Selection
             const Text(
               'Select Role:',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -137,7 +144,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   _selectedRole = newValue!;
                 });
               },
-              items: <String>['Player', 'Coach', 'Field Renter']
+              items: <String>['Player', 'Coach', 'Renter']
                   .map<DropdownMenuItem<String>>((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
@@ -146,6 +153,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               }).toList(),
             ),
             const SizedBox(height: 30),
+            // Register Button
             Center(
               child: ElevatedButton(
                 onPressed: _registerUser,
