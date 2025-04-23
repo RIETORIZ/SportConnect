@@ -1,0 +1,180 @@
+@startuml
+
+' Optional skin parameters to change styling
+skinparam rectangle {
+  BackgroundColor #F9F9F9
+  FontColor #2B2B2B
+  BorderColor #999999
+  FontSize 14
+  Padding 8
+}
+skinparam arrow {
+  FontSize 12
+  Color #2B2B2B
+}
+skinparam defaultTextAlignment center
+
+title SportConnect Screens Diagram
+
+' Group by logical sections for clarity
+rectangle "Login Module" {
+  [LoginScreen] as LoginScreen
+  note right of LoginScreen
+    - Allows user to log in
+    - Chooses role:
+      * Player
+      * Coach
+      * Renter
+  end note
+
+  [RegisterScreen] as RegisterScreen
+  note right of RegisterScreen
+    - Creates new account
+    - Select role on registration
+  end note
+}
+
+rectangle "Player Module" {
+  [PlayerHomeScreen] as PlayerHome
+  note right of PlayerHome
+    - Main screen after Player logs in
+    - Bottom navigation to various features
+  end note
+
+  [SportsFeed] as SportsFeed
+  note right of SportsFeed
+    - Lists available sports fields
+    - Allows quick reservation
+  end note
+
+  [MatchesPage] as MatchesPage
+  note right of MatchesPage
+    - Player views upcoming or past matches
+    - Can create new matches
+  end note
+
+  [TeamSearchPage] as TeamSearchPage
+  note right of TeamSearchPage
+    - Search for teams to join or schedule matches
+  end note
+
+  [TrainingPage] as PlayerTraining
+  note right of PlayerTraining
+    - View or join training sessions (coach-created)
+    - Placeholder for player-specific training info
+  end note
+
+  [DirectMessages] as DirectMessagesPlayer
+  note right of DirectMessagesPlayer
+    - Chat interface for player to communicate with others
+  end note
+}
+
+rectangle "Coach Module" {
+  [CoachScreen] as CoachHome
+  note right of CoachHome
+    - Main screen after Coach logs in
+    - Access to training, matches, team, search, DM
+  end note
+
+  [CoachTrainingPage] as CoachTraining
+  note right of CoachTraining
+    - Create and manage training sessions
+    - Invite players
+  end note
+
+  [MatchesPlayedPage] as MatchesPlayed
+  note right of MatchesPlayed
+    - View matches history
+    - Reserve fields for next matches
+  end note
+
+  [TeamPage] as TeamPageCoach
+  note right of TeamPageCoach
+    - Manage your team roster
+    - Possibly invite or remove players
+  end note
+
+  [SearchPage] as CoachSearch
+  note right of CoachSearch
+    - Search for teams, players, or fields
+  end note
+
+  [DirectMessagesPage] as DirectMessagesCoach
+  note right of DirectMessagesCoach
+    - Coach chats directly with players
+  end note
+
+  [ReserveSportFieldPage] as ReserveField
+  note right of ReserveField
+    - Book a sport field for matches or training
+  end note
+
+  [InvitePlayerPage] as InvitePlayer
+  note right of InvitePlayer
+    - Coach invites new/existing players
+    - Typically by username or email
+  end note
+}
+
+rectangle "Renter Module" {
+  [RenterScreen] as RenterHome
+  note right of RenterHome
+    - Main screen after Renter logs in
+    - Navigation to register/view fields, search, DM
+  end note
+
+  [RegisterSportFieldPage] as RegisterField
+  note right of RegisterField
+    - Renter registers new fields
+    - Sets location, price, availability
+  end note
+
+  [SportFieldsPage] as SportFields
+  note right of SportFields
+    - List or manage all renter's fields
+    - Possibly see booking requests
+  end note
+
+  [search_page] as RenterSearch
+  note right of RenterSearch
+    - Renter-specific search (fields, teams, etc.)
+  end note
+
+  [direct_messages_page] as DirectMessagesRenter
+  note right of DirectMessagesRenter
+    - Chat interface for renter to communicate with customers (players/coaches)
+  end note
+}
+
+'
+' ---------- Screen-to-screen navigation ----------
+'
+LoginScreen --> RegisterScreen : "Go to register if new user"
+LoginScreen --> PlayerHome : "Login as Player"
+LoginScreen --> CoachHome : "Login as Coach"
+LoginScreen --> RenterHome : "Login as Renter"
+
+' Player flows
+PlayerHome --> SportsFeed : "View fields and reserve"
+PlayerHome --> MatchesPage : "Create or view matches"
+PlayerHome --> TeamSearchPage : "Find or join teams"
+PlayerHome --> PlayerTraining : "Access training content"
+PlayerHome --> DirectMessagesPlayer : "Message other players/coaches"
+
+' Coach flows
+CoachHome --> CoachTraining : "Manage training sessions"
+CoachHome --> MatchesPlayed : "View matches history"
+CoachHome --> TeamPageCoach : "Manage your team"
+CoachHome --> CoachSearch : "Search for players/fields"
+CoachHome --> DirectMessagesCoach : "Chat with players"
+CoachHome --> ReserveField : "Reserve fields for matches"
+CoachHome --> InvitePlayer : "Invite new or existing players"
+
+' Renter flows
+RenterHome --> RegisterField : "Register a new field"
+RenterHome --> SportFields : "View or edit your fields"
+RenterHome --> RenterSearch : "Search module"
+RenterHome --> DirectMessagesRenter : "DM with coaches/players"
+
+@enduml

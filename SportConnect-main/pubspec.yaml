@@ -1,0 +1,38 @@
+name: sportcon_1st_gui
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  shared_preferences: ^2.0.18
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  intl: ^0.18.0
+  # Use the latest stable version for flutter_launcher_icons:
+  flutter_launcher_icons: ^0.14.3
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/sunny-soccer-field-picture-demo.jpg
+    - assets/basketball.jpeg
+    - assets/logo.png
+    - assets/tennis.jpg
+    - assets/soccer_field.png
+    - assets/ballicon.png
+
+flutter_launcher_icons:
+  # Provide the path to your logo file
+  image_path: "assets/logo.png"
+  android: true
+  ios: true
