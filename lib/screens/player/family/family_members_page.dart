@@ -1,49 +1,101 @@
 import 'package:flutter/material.dart';
 
 class FamilyMembersPage extends StatefulWidget {
-   FamilyMembersPage({Key? key}) : super(key: key);
+  const FamilyMembersPage({Key? key}) : super(key: key);
 
   @override
   State<FamilyMembersPage> createState() => _FamilyMembersPageState();
 }
 
 class _FamilyMembersPageState extends State<FamilyMembersPage> {
-  // Example family member list with adminC and adminR
-  final List<String> _familyMembers = ['adminC', 'adminR'];
+  final List<Map<String, dynamic>> _familyMembers = [
+    {
+      'name': 'Ahmed Ali ',
+      'age': 15,
+      'gender': 'Male',
+      'friends': ['Khalid Omar', 'Yousef Hassan', 'Faisal Abdullah'],
+      'matches': [
+        {
+          'date': '2023-03-15',
+          'location': 'Riyadh Sports Complex',
+          'teams': 'Al-Saud FC vs Al-Nassr Youth',
+          'coach': 'Coach Sami',
+          'result': '2-1'
+        },
+        {
+          'date': '2023-04-20',
+          'location': 'King Fahd Stadium',
+          'teams': 'School All-Stars vs City Champions',
+          'coach': 'Coach Ahmed',
+          'result': '3-3'
+        },
+      ],
+    },
+    {
+      'name': 'Razan ',
+      'age': 20,
+      'gender': 'Female',
+      'friends': ['Noura Ahmed', 'Sara Mohammed', 'Amira Khalid'],
+      'matches': [
+        {
+          'date': '2023-05-10',
+          'location': 'Princess Sara Academy',
+          'teams': 'Golden Eagles vs Silver Falcons',
+          'coach': 'Coach Fatima',
+          'result': '4-0'
+        }
+      ],
+    },
+  ];
 
   void _addFamilyMember() {
-    // Implement "Add Family Member" logic
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Add family member tapped')),
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Family Member'),
+        content: const Text('This feature is under development'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
     );
   }
 
   void _deleteMember(String member) {
     setState(() {
-      _familyMembers.remove(member);
+      _familyMembers.removeWhere((m) => m['name'] == member);
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$member deleted')),
+      SnackBar(content: Text('$member removed')),
     );
   }
 
   void _dmMember(String member) {
-    // Implement "DM" logic
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('DM with $member pressed')),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: Text('Chat with $member')),
+          body: const Center(child: Text('Chat interface')),
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final minorMembers = _familyMembers.where((m) => m['age'] < 18).toList();
+
     return Scaffold(
-      // Dark theme
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context), // Go back
+          onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Family Members',
@@ -52,7 +104,6 @@ class _FamilyMembersPageState extends State<FamilyMembersPage> {
       ),
       body: Column(
         children: [
-          // "Add Family Member" button near the top
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: ElevatedButton.icon(
@@ -70,14 +121,17 @@ class _FamilyMembersPageState extends State<FamilyMembersPage> {
               ),
             ),
           ),
-
-          // List of current family members
           Expanded(
-            child: _familyMembers.isNotEmpty
-                ? ListView.builder(
-                    itemCount: _familyMembers.length,
-                    itemBuilder: (context, index) {
-                      final member = _familyMembers[index];
+            child: minorMembers.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No family members under 18',
+                      style: TextStyle(color: Colors.white70)),
+                    )
+                : ListView.builder(
+                    itemCount: minorMembers.length,
+                    itemBuilder: (context, idx) {
+                      final member = minorMembers[idx];
                       return Padding(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
@@ -86,62 +140,112 @@ class _FamilyMembersPageState extends State<FamilyMembersPage> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          elevation: 4,
-                          shadowColor: Colors.greenAccent,
-                          child: ListTile(
-                            title: Text(
-                              member,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            // Two action buttons on the trailing side:
-                            trailing: SizedBox(
-                              width: 120, // Enough space for two buttons
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  ElevatedButton(
-                                    onPressed: () => _dmMember(member),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.green,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Personal Info
+                                Text(
+                                  member['name'],
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  'Age: ${member['age']} | Gender: ${member['gender']}',
+                                  style: const TextStyle(color: Colors.white70),
+                                ),
+                                const SizedBox(height: 16),
+
+                                // Friends Section
+                                const Text(
+                                  'Friends:',
+                                  style: TextStyle(
+                                    color: Colors.greenAccent,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                ...member['friends'].map<Widget>((friend) => Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 4),
+                                  child: Text(
+                                    '• $friend',
+                                    style: const TextStyle(color: Colors.white70),
+                                  ),
+                                )).toList(),
+                                const SizedBox(height: 16),
+
+                                // Matches Section
+                                const Text(
+                                  'Recent Matches:',
+                                  style: TextStyle(
+                                    color: Colors.greenAccent,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                ...member['matches'].map<Widget>((match) => Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 4),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${match['date']}: ${match['teams']}',
+                                        style: const TextStyle(color: Colors.white),
+                                      ),
+                                      Text(
+                                        'Location: ${match['location']}',
+                                        style: const TextStyle(color: Colors.white70),
+                                      ),
+                                      Text(
+                                        'Coach: ${match['coach']} | Result: ${match['result']}',
+                                        style: const TextStyle(color: Colors.white70),
+                                      ),
+                                      const Divider(color: Colors.grey),
+                                    ],
+                                  ),
+                                )).toList(),
+
+                                // Action Buttons
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    ElevatedButton(
+                                      onPressed: () => _dmMember(member['name']),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        'Message',
+                                        style: TextStyle(color: Colors.black),
                                       ),
                                     ),
-                                    child: const Text(
-                                      'DM',
-                                      style: TextStyle(color: Colors.black),
-                                    ),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: () => _deleteMember(member),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.red,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
+                                    const SizedBox(width: 8),
+                                    ElevatedButton(
+                                      onPressed: () => _deleteMember(member['name']),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        'Remove',
+                                        style: TextStyle(color: Colors.white),
                                       ),
                                     ),
-                                    child: const Text(
-                                      'Del',
-                                      style: TextStyle(color: Colors.white),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       );
                     },
-                  )
-                : const Center(
-                    child: Text(
-                      'No family members yet.',
-                      style: TextStyle(color: Colors.white),
-                    ),
                   ),
           ),
         ],
