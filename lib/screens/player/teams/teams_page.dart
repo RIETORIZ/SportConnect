@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'find_team_matches_page.dart';
 
 class TeamsPage extends StatefulWidget {
   const TeamsPage({Key? key}) : super(key: key);
@@ -12,28 +13,38 @@ class _TeamsPageState extends State<TeamsPage> {
   // Each team has a "sport" and "isMember" bool to indicate membership.
   final List<Map<String, dynamic>> _allTeams = [
     {
+      'teamId': 1,
       'teamName': 'Riyadh Rangers',
       'sport': 'Soccer',
+      'region': 'Riyadh',
       'isMember': true,
     },
     {
+      'teamId': 2,
       'teamName': 'Jeddah Jets',
       'sport': 'Basketball',
+      'region': 'Jeddah',
       'isMember': false,
     },
     {
+      'teamId': 3,
       'teamName': 'Dammam Dynamos',
       'sport': 'Soccer',
+      'region': 'Dammam',
       'isMember': true,
     },
     {
+      'teamId': 4,
       'teamName': 'Mecca Mavericks',
       'sport': 'Tennis',
+      'region': 'Mecca',
       'isMember': false,
     },
     {
+      'teamId': 5,
       'teamName': 'Medina Meteors',
       'sport': 'Basketball',
+      'region': 'Medina',
       'isMember': false,
     },
   ];
@@ -45,7 +56,7 @@ class _TeamsPageState extends State<TeamsPage> {
   List<Map<String, dynamic>> get otherTeams =>
       _allTeams.where((team) => team['isMember'] == false).toList();
 
-  // Example placeholder for "Join Team"
+  // Join an existing team
   void _joinTeam() {
     // Implement your "join" logic or navigation here
     ScaffoldMessenger.of(context).showSnackBar(
@@ -53,11 +64,92 @@ class _TeamsPageState extends State<TeamsPage> {
     );
   }
 
-  // Example placeholder for "Create Team"
+  // Create a new team
   void _createTeam() {
     // Implement your "create" logic or navigation here
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Create Team feature is not implemented!')),
+    );
+  }
+
+  // Find matches for a team using the matching algorithm
+  void _findMatchesForTeam(Map<String, dynamic> team) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FindTeamMatchesPage(
+          teamId: team['teamId'],
+          teamName: team['teamName'],
+          sport: team['sport'],
+          region: team['region'],
+        ),
+      ),
+    );
+  }
+
+  // View team details
+  void _viewTeamDetails(Map<String, dynamic> team) {
+    // For now, just show a dialog with team info
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: Text(
+          team['teamName'],
+          style: const TextStyle(color: Colors.white),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _infoRow(Icons.sports, 'Sport', team['sport']),
+            const SizedBox(height: 8),
+            _infoRow(Icons.location_on, 'Region', team['region']),
+            const SizedBox(height: 8),
+            _infoRow(
+              Icons.group,
+              'Status',
+              team['isMember'] ? 'Member' : 'Not a member',
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close', style: TextStyle(color: Colors.green)),
+          ),
+          if (team['isMember'])
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _findMatchesForTeam(team);
+              },
+              child: const Text('Find Matches',
+                  style: TextStyle(color: Colors.green)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, color: Colors.greenAccent, size: 20),
+        const SizedBox(width: 8),
+        Text(
+          '$label:',
+          style: const TextStyle(
+            color: Colors.white70,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          value,
+          style: const TextStyle(color: Colors.white),
+        ),
+      ],
     );
   }
 
@@ -154,10 +246,34 @@ class _TeamsPageState extends State<TeamsPage> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        subtitle: const Text(
-                          'You are a member of this team',
-                          style: TextStyle(color: Colors.grey),
+                        subtitle: Row(
+                          children: [
+                            Icon(Icons.location_on,
+                                color: Colors.greenAccent, size: 14),
+                            SizedBox(width: 4),
+                            Text(
+                              team['region'],
+                              style: TextStyle(color: Colors.white70),
+                            ),
+                          ],
                         ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.info_outline,
+                                  color: Colors.blue),
+                              onPressed: () => _viewTeamDetails(team),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.sports_soccer,
+                                  color: Colors.green),
+                              onPressed: () => _findMatchesForTeam(team),
+                              tooltip: 'Find matches',
+                            ),
+                          ],
+                        ),
+                        onTap: () => _viewTeamDetails(team),
                       ),
                     );
                   },
@@ -202,10 +318,23 @@ class _TeamsPageState extends State<TeamsPage> {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      subtitle: const Text(
-                        'You are not a member of this team',
-                        style: TextStyle(color: Colors.grey),
+                      subtitle: Row(
+                        children: [
+                          Icon(Icons.location_on,
+                              color: Colors.greenAccent, size: 14),
+                          SizedBox(width: 4),
+                          Text(
+                            team['region'],
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                        ],
                       ),
+                      trailing: IconButton(
+                        icon:
+                            const Icon(Icons.info_outline, color: Colors.blue),
+                        onPressed: () => _viewTeamDetails(team),
+                      ),
+                      onTap: () => _viewTeamDetails(team),
                     );
                   },
                 ),

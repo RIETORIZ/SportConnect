@@ -111,7 +111,7 @@ class SportsFields(models.Model):
     rent_price_per_hour = models.DecimalField(max_digits=10, decimal_places=2, null=False)
     suitable_sports = models.CharField(max_length=200, null=False)
     available_for_female = models.BooleanField(default=True)
-    renter_id = models.ForeignKey(Renters, on_delete=models.CASCADE, null=False, db_column='renter_id')
+    renter_id = models.ForeignKey(Renters, on_delete=models.CASCADE, null=True, blank=True, db_column='renter_id')
     comments = models.TextField(blank=True, null=True)
     review = models.FloatField(default=0.0)  # Changed to match the actual column name
 

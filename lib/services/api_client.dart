@@ -7,8 +7,9 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiClient {
+  // Base URL for the API - adjust this to match your Django server
   static String get baseUrl {
-    // Determine the base URL based on the platform c
+    // Determine the base URL based on the platform
     if (kIsWeb) {
       return 'http://localhost:8000/api'; // For web
     } else if (Platform.isAndroid) {
@@ -46,7 +47,11 @@ class ApiClient {
     if (requiresAuth) {
       final token = await _getAuthToken();
       if (token != null) {
+        // This format exactly matches what your Django backend expects
         headers['Authorization'] = 'Token $token';
+        print("Using token for authentication: $token");
+      } else {
+        print("No auth token found in SharedPreferences");
       }
     }
 
@@ -58,10 +63,17 @@ class ApiClient {
     final url = Uri.parse('$baseUrl/$endpoint');
     final headers = await _getHeaders(requiresAuth: requiresAuth);
 
+    print("Making GET request to: $url");
+    print("Headers: $headers");
+
     try {
       final response = await _client.get(url, headers: headers);
+      print("Response status: ${response.statusCode}");
+      print(
+          "Response body (first 100 chars): ${response.body.substring(0, min(100, response.body.length))}...");
       return _handleResponse(response);
     } catch (e) {
+      print("Network error during GET: $e");
       throw Exception('Network error: $e');
     }
   }
@@ -72,14 +84,23 @@ class ApiClient {
     final url = Uri.parse('$baseUrl/$endpoint');
     final headers = await _getHeaders(requiresAuth: requiresAuth);
 
+    print("Making POST request to: $url");
+    print("Headers: $headers");
+    if (data != null) {
+      print("Request body: ${jsonEncode(data)}");
+    }
+
     try {
       final response = await _client.post(
         url,
         headers: headers,
         body: data != null ? jsonEncode(data) : null,
       );
+      print("Response status: ${response.statusCode}");
+      print("Response body: ${response.body}");
       return _handleResponse(response);
     } catch (e) {
+      print("Network error during POST: $e");
       throw Exception('Network error: $e');
     }
   }
@@ -171,6 +192,7 @@ class ApiClient {
 
       print("Login response status: ${response.statusCode}");
       print("Login response body length: ${response.body.length}");
+      print("Login response body: ${response.body}");
 
       final responseData = _handleResponse(response);
 
@@ -178,6 +200,7 @@ class ApiClient {
       if (responseData != null && responseData.containsKey('token')) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('authToken', responseData['token']);
+        print("Saved auth token: ${responseData['token']}");
 
         // Also save logged-in status for convenience
         await prefs.setBool('isLoggedIn', true);
@@ -189,6 +212,7 @@ class ApiClient {
         if (responseData.containsKey('user_type')) {
           await prefs.setString(
               'userRole', responseData['user_type'].toString().toLowerCase());
+          print("Saved user role: ${responseData['user_type']}");
         }
       }
 
@@ -201,15 +225,24 @@ class ApiClient {
 
   // Register
   Future<Map<String, dynamic>> register(
-      String username, String email, String password, String role) async {
+      String username, String email, String password, String role,
+      {Map<String, dynamic>? additionalData}) async {
+    // Create the registration data with required fields
+    final Map<String, dynamic> registrationData = {
+      'username': username,
+      'email': email,
+      'password': password,
+      'role': role,
+    };
+
+    // If additional data is provided, merge it with registrationData
+    if (additionalData != null) {
+      registrationData.addAll(additionalData);
+    }
+
     return await post(
       'auth/register/',
-      data: {
-        'username': username,
-        'email': email,
-        'password': password,
-        'role': role,
-      },
+      data: registrationData,
       requiresAuth: false,
     );
   }
@@ -222,6 +255,9 @@ class ApiClient {
       // Clear auth token regardless of API call success
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('authToken');
+      await prefs.setBool('isLoggedIn', false);
+      await prefs.remove('userRole');
+      await prefs.remove('loggedInEmail');
     }
   }
 
@@ -243,7 +279,21 @@ class ApiClient {
 
   // Get all fields
   Future<List<dynamic>> getAllFields() async {
-    return await get('fields/');
+    print("Getting all fields from API endpoint: $baseUrl/fields/");
+    final response = await get('fields/');
+    print("Fields API response: $response");
+
+    if (response is List) {
+      return response;
+    } else if (response is Map) {
+      // Some APIs return objects like {"results": [...]} instead of direct arrays
+      if (response.containsKey('results') && response['results'] is List) {
+        return response['results'];
+      }
+    }
+
+    print("Unexpected response format: $response");
+    return [];
   }
 
   // Get field details
@@ -326,5 +376,10 @@ class ApiClient {
         'message_text': message,
       },
     );
+  }
+
+  // Helper function to get the minimum of two numbers
+  int min(int a, int b) {
+    return a < b ? a : b;
   }
 }

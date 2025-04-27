@@ -1,21 +1,25 @@
 import 'package:flutter/material.dart';
 import '../../../services/api_service.dart';
 
-class SearchEnemyTeamPage extends StatefulWidget {
-  final String? sport;
-  final String? region;
+class FindTeamMatchesPage extends StatefulWidget {
+  final int teamId;
+  final String teamName;
+  final String sport;
+  final String region;
 
-  const SearchEnemyTeamPage({
-    super.key,
-    this.sport,
-    this.region,
-  });
+  const FindTeamMatchesPage({
+    Key? key,
+    required this.teamId,
+    required this.teamName,
+    required this.sport,
+    required this.region,
+  }) : super(key: key);
 
   @override
-  State<SearchEnemyTeamPage> createState() => _SearchEnemyTeamPageState();
+  _FindTeamMatchesPageState createState() => _FindTeamMatchesPageState();
 }
 
-class _SearchEnemyTeamPageState extends State<SearchEnemyTeamPage> {
+class _FindTeamMatchesPageState extends State<FindTeamMatchesPage> {
   bool _isLoading = true;
   List<dynamic> _matchResults = [];
   String? _error;
@@ -52,6 +56,7 @@ class _SearchEnemyTeamPageState extends State<SearchEnemyTeamPage> {
         _isLoading = false;
       });
     } catch (e) {
+      print('Error fetching team matches: $e');
       setState(() {
         _error = 'Failed to load team matches: $e';
         _isLoading = false;
@@ -59,9 +64,139 @@ class _SearchEnemyTeamPageState extends State<SearchEnemyTeamPage> {
     }
   }
 
-  void _selectTeam(dynamic team) {
-    // Return the selected team to the previous screen
-    Navigator.pop(context, team);
+  void _challengeTeam(dynamic matchData) {
+    if (matchData['match_type'] == 'team') {
+      _showChallengeTeamDialog(matchData);
+    } else if (matchData['match_type'] == 'roster') {
+      _showInvitePlayersDialog(matchData);
+    }
+  }
+
+  void _showChallengeTeamDialog(dynamic matchData) {
+    final teamName = matchData['team_name'];
+    final teamId = matchData['team_id'];
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text(
+          'Challenge Team',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Send a challenge to $teamName?',
+              style: const TextStyle(color: Colors.white),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'This will send a notification to the team captain asking them to accept your challenge.',
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              // Here you would call your API to send the challenge
+              // ApiService.sendTeamChallenge(widget.teamId, teamId);
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Challenge sent to $teamName!')),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+            ),
+            child: const Text('Send Challenge'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showInvitePlayersDialog(dynamic matchData) {
+    final players = matchData['players'] as List;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text(
+          'Invite Players',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'The following players match your team:',
+                style: TextStyle(color: Colors.white),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 200,
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: players.length,
+                  itemBuilder: (context, index) {
+                    final player = players[index];
+                    return CheckboxListTile(
+                      title: Text(
+                        player['username'],
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      subtitle: Text(
+                        'Experience: ${player['experience_level']}',
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 12),
+                      ),
+                      value: true, // Default selected
+                      activeColor: Colors.green,
+                      checkColor: Colors.white,
+                      onChanged: (value) {
+                        // In a real app, you'd track selected players
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              // Here you would call your API to invite the players
+              // ApiService.invitePlayers(widget.teamId, selectedPlayerIds);
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                    content: Text('Invitations sent to selected players!')),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+            ),
+            child: const Text('Send Invitations'),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildMatchCard(dynamic match) {
@@ -142,20 +277,19 @@ class _SearchEnemyTeamPageState extends State<SearchEnemyTeamPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                ElevatedButton(
-                  onPressed: () => _selectTeam(match),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                if (matchType != 'none')
+                  ElevatedButton(
+                    onPressed: () => _challengeTeam(matchData),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
+                    child: matchType == 'team'
+                        ? const Text('Challenge Team')
+                        : const Text('Invite Players'),
                   ),
-                  child: matchType == 'team'
-                      ? const Text('Select Team')
-                      : matchType == 'roster'
-                          ? const Text('Select Players')
-                          : const Text('Find More Teams'),
-                ),
               ],
             ),
           ],
@@ -227,7 +361,7 @@ class _SearchEnemyTeamPageState extends State<SearchEnemyTeamPage> {
           style: TextStyle(color: Colors.white70),
         ),
         const SizedBox(height: 8),
-        ...players.map((player) => Padding(
+        ...players.take(3).map((player) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 children: [
@@ -246,6 +380,15 @@ class _SearchEnemyTeamPageState extends State<SearchEnemyTeamPage> {
                 ],
               ),
             )),
+        if (players.length > 3)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              '+ ${players.length - 3} more players',
+              style: const TextStyle(
+                  color: Colors.white70, fontStyle: FontStyle.italic),
+            ),
+          ),
       ],
     );
   }
@@ -282,26 +425,48 @@ class _SearchEnemyTeamPageState extends State<SearchEnemyTeamPage> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text('Search Enemy Team'),
+        title: Text('Matches for ${widget.teamName}'),
         backgroundColor: Colors.green,
       ),
       body: Column(
         children: [
-          // Filter section
+          // Team info and filter header
           Container(
             padding: const EdgeInsets.all(16),
             color: Colors.grey[900],
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Choose Experience Level:',
-                  style: TextStyle(
+                // Team info
+                Text(
+                  widget.teamName,
+                  style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 16,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.sports, color: Colors.greenAccent, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      widget.sport,
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                    const SizedBox(width: 16),
+                    Icon(Icons.location_on,
+                        color: Colors.greenAccent, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      widget.region,
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
                 // Level dropdown and search button
                 Row(
                   children: [
@@ -360,21 +525,7 @@ class _SearchEnemyTeamPageState extends State<SearchEnemyTeamPage> {
           Expanded(
             child: _isLoading
                 ? const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.green),
-                        ),
-                        SizedBox(height: 20),
-                        Text(
-                          'Searching for teams...',
-                          style: TextStyle(fontSize: 16, color: Colors.white),
-                        ),
-                      ],
-                    ),
-                  )
+                    child: CircularProgressIndicator(color: Colors.green))
                 : _error != null
                     ? Center(
                         child: Text(
@@ -386,7 +537,7 @@ class _SearchEnemyTeamPageState extends State<SearchEnemyTeamPage> {
                     : _matchResults.isEmpty
                         ? const Center(
                             child: Text(
-                              'No matches found. Try adjusting your search criteria.',
+                              'No matches found for your team. Try adjusting your search criteria.',
                               style: TextStyle(color: Colors.white70),
                               textAlign: TextAlign.center,
                             ),

@@ -73,8 +73,8 @@ class SportsSerializer(serializers.ModelSerializer):
         read_only_fields = ['sport_id']
 
 class TeamSerializer(serializers.ModelSerializer):
-    coach_name = serializers.CharField(source='coach_name', read_only=True)
-    player_names = serializers.ListField(source='player_names', read_only=True)
+    coach_name = serializers.CharField(read_only=True)  # Removed the redundant source
+    player_names = serializers.ListField(read_only=True)
     
     class Meta:
         model = Teams
@@ -128,18 +128,26 @@ class RegisterSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
     password = serializers.CharField(write_only=True, required=True)
     role = serializers.ChoiceField(choices=['player', 'coach', 'renter'], required=True)
+    
+    # Add these fields
     phone_number = serializers.CharField(required=False, allow_blank=True)
     region = serializers.CharField(required=False, allow_blank=True)
+    age = serializers.IntegerField(required=False)
+    gender = serializers.CharField(required=False, allow_blank=True)
     
-    def validate_email(self, value):
-        if Users.objects.filter(email=value).exists():
-            raise serializers.ValidationError("Email already in use.")
-        return value
+    # Role-specific fields
+    # For players
+    preferred_sports = serializers.CharField(required=False, allow_blank=True)
+    experience_level = serializers.CharField(required=False, allow_blank=True)
     
-    def validate_username(self, value):
-        if Users.objects.filter(username=value).exists():
-            raise serializers.ValidationError("Username already in use.")
-        return value
+    # For coaches
+    specialization = serializers.CharField(required=False, allow_blank=True)
+    years_of_experience = serializers.IntegerField(required=False)
+    certifications = serializers.CharField(required=False, allow_blank=True)
+    
+    # For renters
+    business_name = serializers.CharField(required=False, allow_blank=True)
+    contact_info = serializers.CharField(required=False, allow_blank=True)
 
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)

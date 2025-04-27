@@ -36,6 +36,14 @@ urlpatterns = [
     
     # Training operations
     path('training/<int:pk>/invite/', views.InviteToTrainingView.as_view(), name='invite-to-training'),
+
+      # User settings
+    path('users/settings/', views.UserSettingsView.as_view(), name='user-settings'),
+    
+    # Delete account
+    path('users/delete-account/', views.DeleteAccountView.as_view(), name='delete-account'),
+
+    path('teams/matchmaking/', views.TeamMatchmakingView.as_view(), name='team-matchmaking'),
     
     # Include router URLs
     path('', include(router.urls)),

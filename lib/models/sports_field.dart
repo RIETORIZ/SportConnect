@@ -8,7 +8,7 @@ class SportsField {
   final double rentPricePerHour;
   final String suitableSports;
   final bool availableForFemale;
-  final int renterId;
+  final int? renterId;
   final String? comments;
   final double review;
   String? renterName; // Not from DB, but useful for UI
@@ -21,7 +21,7 @@ class SportsField {
     required this.rentPricePerHour,
     required this.suitableSports,
     required this.availableForFemale,
-    required this.renterId,
+    this.renterId,
     this.comments,
     this.review = 0.0,
     this.renterName,
@@ -36,7 +36,7 @@ class SportsField {
       rentPricePerHour: double.parse(json['rent_price_per_hour'].toString()),
       suitableSports: json['suitable_sports'],
       availableForFemale: json['available_for_female'] ?? false,
-      renterId: json['renter_id'],
+      renterId: json['renter_id'], // This will handle null automatically
       comments: json['comments'],
       review: json['review']?.toDouble() ?? 0.0,
       renterName: json['renter_name'],

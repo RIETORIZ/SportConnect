@@ -12,7 +12,7 @@ from django.utils import timezone
 from django.http import JsonResponse
 from django.contrib.auth.models import User
 from django.contrib.auth.models import Group
-from django.db.models import Max
+from django.db.models import Max, Avg
 import hashlib
 
 from api.models import (
@@ -25,7 +25,7 @@ from .serializers import (
     MatchSerializer, TrainingSessionSerializer, ReservationSerializer, FieldBookingSerializer,
     DirectMessageSerializer, ConversationSerializer
 )
-from api.utils import recommend_fields, recommend_coaches, find_matches_for_player, build_user_map
+from api.utils import recommend_fields, recommend_coaches, find_matches_for_player, build_user_map, team_matchmaking, profile_team
 
 
 def ping(request):
@@ -50,8 +50,10 @@ class RegisterView(generics.GenericAPIView):
                 'username': serializer.validated_data['username'],
                 'email': serializer.validated_data['email'],
                 'password_hash': make_password(serializer.validated_data['password']),
-                'phone_number': serializer.validated_data.get('phone_number', '') or '',
-                'region': serializer.validated_data.get('region', '') or '',
+                'phone_number': serializer.validated_data.get('phone_number', ''),
+                'region': serializer.validated_data.get('region', ''),
+                'age': serializer.validated_data.get('age'),
+                'gender': serializer.validated_data.get('gender', ''),
             }
             
             # Create user with proper error handling
@@ -67,11 +69,28 @@ class RegisterView(generics.GenericAPIView):
             try:
                 role = serializer.validated_data['role']
                 if role == 'player':
-                    Players.objects.create(user_id=user)
+                    Players.objects.create(
+                        user_id=user,
+                        age=user.age,
+                        gender=user.gender,
+                        preferred_sports=serializer.validated_data.get('preferred_sports', ''),
+                        experience_level=serializer.validated_data.get('experience_level', ''),
+                    )
                 elif role == 'coach':
-                    Coaches.objects.create(user_id=user)
+                    Coaches.objects.create(
+                        user_id=user,
+                        specialization=serializer.validated_data.get('specialization', ''),
+                        years_of_experience=serializer.validated_data.get('years_of_experience', 0),
+                        certifications=serializer.validated_data.get('certifications', ''),
+                        gender=user.gender,
+                    )
                 elif role == 'renter':
-                    Renters.objects.create(user_id=user)
+                    Renters.objects.create(
+                        user_id=user,
+                        business_name=serializer.validated_data.get('business_name', ''),
+                        contact_info=serializer.validated_data.get('contact_info', ''),
+                        gender=user.gender,
+                    )
                 else:
                     return Response(
                         {'detail': f'Invalid role: {role}. Must be player, coach, or renter.'},
@@ -370,12 +389,54 @@ class SportsFieldViewSet(viewsets.ModelViewSet):
         return SportsFields.objects.all()
     
     def perform_create(self, serializer):
-        # Ensure renters can only create fields for themselves
-        if hasattr(self.request.user, 'renters'):
-            serializer.save(renter_id=self.request.user.renters)
-        else:
-            # Non-renters cannot create fields
-            raise PermissionError("Only renters can create fields")
+        print(f"User: {self.request.user}")
+        
+        # Get the maximum field_id using aggregate
+        from django.db.models import Max
+        max_id = SportsFields.objects.all().aggregate(Max('field_id'))['field_id__max'] or 0
+        next_id = max_id + 1
+        print(f"Using next field_id: {next_id}")
+        
+        # Check if user is a string (which is happening in your case)
+        if isinstance(self.request.user, str):
+            # Log for debugging
+            print(f"User is a string: {self.request.user}")
+            
+            try:
+                # First, try to get a Django User with this username
+                django_user = User.objects.get(username=self.request.user)
+                
+                # Then try to find the corresponding Users model instance
+                # by email (assuming emails match)
+                from api.models import Users
+                custom_user = Users.objects.get(email=django_user.email)
+                
+                # Finally, get the renter associated with this user
+                renter = Renters.objects.get(user_id=custom_user)
+                
+                # Save with the found renter and the new ID
+                serializer.save(field_id=next_id, renter_id=renter)
+                return
+                
+            except Exception as e:
+                print(f"Error finding user/renter: {e}")
+                # Save with new ID but without a renter
+                serializer.save(field_id=next_id, renter_id=None)
+                return
+        
+        # Existing logic for when user is a proper model instance
+        try:
+            # If user is a proper Users instance
+            if isinstance(self.request.user, Users):
+                renter = Renters.objects.get(user_id=self.request.user)
+                serializer.save(field_id=next_id, renter_id=renter)
+            else:
+                # Save with new ID but without a renter
+                serializer.save(field_id=next_id, renter_id=None)
+        except Exception as e:
+            print(f"Error in perform_create: {e}")
+            # Save with new ID but without a renter
+            serializer.save(field_id=next_id, renter_id=None)
 
 class MatchViewSet(viewsets.ModelViewSet):
     queryset = Matches.objects.all()
@@ -604,12 +665,163 @@ class InviteToTrainingView(APIView):
         except Players.DoesNotExist:
             return Response({'detail': 'Player not found'}, status=status.HTTP_404_NOT_FOUND)
         
-
-
-        
-        
-
-
-        
-
+class UserSettingsView(APIView):
+    """
+    API view for getting and updating user settings
+    """
+    permission_classes = [IsAuthenticated]
     
+    def get(self, request):
+        """
+        Get user settings
+        """
+        user = request.user
+        
+        # Get user profile data
+        profile_data = {
+            'user_id': user.user_id,
+            'username': user.username,
+            'email': user.email,
+            'push_notifications': getattr(user, 'push_notifications', True),
+            'email_notifications': getattr(user, 'email_notifications', False),
+            'dm_sounds': getattr(user, 'dm_sounds', True),
+        }
+        
+        # Return user settings
+        return Response(profile_data)
+    
+    def patch(self, request):
+        """
+        Update user settings
+        """
+        user = request.user
+        
+        # Update settings fields
+        if 'push_notifications' in request.data:
+            user.push_notifications = request.data['push_notifications']
+        if 'email_notifications' in request.data:
+            user.email_notifications = request.data['email_notifications']
+        if 'dm_sounds' in request.data:
+            user.dm_sounds = request.data['dm_sounds']
+        
+        # Save updated user
+        user.save()
+        
+        return Response({'detail': 'Settings updated successfully'})
+
+class DeleteAccountView(APIView):
+    """
+    API view for deleting a user account
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def delete(self, request):
+        """
+        Delete user account
+        """
+        user = request.user
+        
+        try:
+            # Delete the user's token
+            if hasattr(user, 'auth_token'):
+                user.auth_token.delete()
+            
+            # Delete associated profiles
+            if hasattr(user, 'players'):
+                user.players.delete()
+            elif hasattr(user, 'coaches'):
+                user.coaches.delete()
+            elif hasattr(user, 'renters'):
+                user.renters.delete()
+                
+            # Delete the user
+            user.delete()
+            
+            return Response({'detail': 'Account deleted successfully'}, 
+                           status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            return Response({'detail': f'Error deleting account: {str(e)}'},
+                           status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+class TeamMatchmakingView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        # Get filter parameters from query string
+        sport = request.query_params.get('sport', None)
+        region = request.query_params.get('region', None)
+        experience_level = request.query_params.get('experience_level', None)
+        num_results = int(request.query_params.get('num_results', 5))
+        
+        # Use the team_matchmaking utility function
+        match_results = team_matchmaking(
+            sport=sport,
+            region=region,
+            experience_level=experience_level,
+            num_results=num_results
+        )
+        
+        # Prepare the response data
+        response_data = []
+        for result in match_results:
+            team = result['team']
+            match_type = result['match_type']
+            match = result['match']
+            
+            # Get team details
+            team_data = {
+                'team_id': team.team_id,
+                'team_name': team.team_name,
+                'region': team.region,
+                'player_count': len(team.player_id)
+            }
+            
+            # Add team profile
+            profile = profile_team(team)
+            team_data.update({
+                'avg_age': profile['avg_age'],
+                'avg_show_up_rate': profile['avg_show_up_rate'],
+                'team_sport': profile['team_sport'],
+                'experience_level': profile['experience_level']
+            })
+            
+            # Add match details based on match type
+            if match_type == 'team':
+                # Add matched team details
+                match_profile = profile_team(match)
+                match_data = {
+                    'match_type': 'team',
+                    'team_id': match.team_id,
+                    'team_name': match.team_name,
+                    'player_count': len(match.player_id),
+                    'avg_age': match_profile['avg_age'],
+                    'avg_show_up_rate': match_profile['avg_show_up_rate'],
+                }
+            elif match_type == 'roster':
+                # Add roster details
+                match_data = {
+                    'match_type': 'roster',
+                    'players': [{
+                        'user_id': player.user_id.user_id,
+                        'username': player.user_id.username,
+                        'age': getattr(player.user_id, 'age', None),
+                        'experience_level': player.experience_level,
+                        'preferred_sports': player.preferred_sports,
+                    } for player in match]
+                }
+            else:
+                # No match found
+                match_data = {
+                    'match_type': 'none',
+                    'message': 'No suitable opponent or players available.'
+                }
+            
+            # Combine team and match data
+            result_data = {
+                'team': team_data,
+                'match': match_data
+            }
+            
+            response_data.append(result_data)
+            
+        return Response(response_data)

@@ -80,12 +80,27 @@ class ApiService {
 
   // Register method
   static Future<Map<String, dynamic>> register(
-      String username, String email, String password, String role) async {
+      String username, String email, String password, String role,
+      {Map<String, dynamic>? additionalData}) async {
     try {
       print("Attempting registration to: $baseUrl/auth/register/");
       print("With email: $email, username: $username, role: $role");
 
-      return await _client.register(username, email, password, role);
+      final Map<String, dynamic> registrationData = {
+        'username': username,
+        'email': email,
+        'password': password,
+        'role': role,
+      };
+
+      // If additionalData is provided, merge it with registrationData
+      if (additionalData != null) {
+        registrationData.addAll(additionalData);
+      }
+
+      // Use the client to register with full data
+      return await _client.post('auth/register/',
+          data: registrationData, requiresAuth: false);
     } catch (e) {
       print('Registration error: $e');
       throw Exception('Failed to register: $e');
@@ -135,9 +150,21 @@ class ApiService {
   // Get all sports fields
   static Future<List<SportsField>> getSportsFields() async {
     try {
+      print("Calling API to get sports fields...");
       final fieldsJson = await _client.getAllFields();
+      print("Received fields JSON: $fieldsJson");
+
       return fieldsJson
-          .map((fieldJson) => SportsField.fromJson(fieldJson))
+          .map((fieldJson) {
+            try {
+              return SportsField.fromJson(fieldJson);
+            } catch (e) {
+              print("Error parsing field: $e for data: $fieldJson");
+              return null;
+            }
+          })
+          .where((field) => field != null)
+          .cast<SportsField>()
           .toList();
     } catch (e) {
       print('Get fields error: $e');
@@ -162,10 +189,39 @@ class ApiService {
     try {
       final registeredFieldJson =
           await _client.post('fields/', data: fieldData);
-      return SportsField.fromJson(registeredFieldJson);
+
+      // Safe parsing to handle potential null values
+      if (registeredFieldJson != null) {
+        return SportsField.fromJson(registeredFieldJson);
+      } else {
+        // Handle null response
+        throw Exception('Received null response from server');
+      }
     } catch (e) {
       print('Register field error: $e');
       throw Exception('Failed to register field: $e');
+    }
+  }
+
+  static Future<SportsField> updateField(
+      int fieldId, Map<String, dynamic> updateData) async {
+    try {
+      final updatedFieldJson =
+          await _client.patch('fields/$fieldId/', data: updateData);
+      return SportsField.fromJson(updatedFieldJson);
+    } catch (e) {
+      print('Update field error: $e');
+      throw Exception('Failed to update field: $e');
+    }
+  }
+
+  // Delete a field
+  static Future<void> deleteField(int fieldId) async {
+    try {
+      await _client.delete('fields/$fieldId/');
+    } catch (e) {
+      print('Delete field error: $e');
+      throw Exception('Failed to delete field: $e');
     }
   }
 
@@ -369,6 +425,48 @@ class ApiService {
     } catch (e) {
       print('Find matching players error: $e');
       throw Exception('Failed to find matching players: $e');
+    }
+  }
+
+  static Future<List<dynamic>> getTeamMatches(
+      {String? sport,
+      String? region,
+      String? experienceLevel,
+      int numResults = 5}) async {
+    try {
+      // Build query parameters
+      final queryParams = {
+        if (sport != null) 'sport': sport,
+        if (region != null) 'region': region,
+        if (experienceLevel != null) 'experience_level': experienceLevel,
+        'num_results': numResults.toString(),
+      };
+
+      // Convert query parameters to URL format
+      final queryString = queryParams.entries
+          .map((e) =>
+              '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+          .join('&');
+
+      // Make API call
+      final result = await _client.get('teams/matchmaking/?$queryString');
+      return result;
+    } catch (e) {
+      print('Get team matches error: $e');
+      throw Exception('Failed to load team matches: $e');
+    }
+  }
+
+  // Get all available fields (for player and coach view)
+  static Future<List<SportsField>> getAvailableFields() async {
+    try {
+      final fieldsJson = await _client.get('fields/?available_for_female=true');
+      return fieldsJson
+          .map((fieldJson) => SportsField.fromJson(fieldJson))
+          .toList();
+    } catch (e) {
+      print('Get available fields error: $e');
+      throw Exception('Failed to load available fields: $e');
     }
   }
 }

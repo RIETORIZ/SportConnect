@@ -9,9 +9,27 @@ class AuthService {
     return await ApiService.login(email, password);
   }
 
-  // Register a new user
+  // Register a new user with role-specific data
   static Future<Map<String, dynamic>> register(
-      String username, String email, String password, String role) async {
+      String username, String email, String password, String role,
+      {Map<String, dynamic>? additionalData}) async {
+    // Create registration data with required fields
+    final Map<String, dynamic> registrationData = {
+      'username': username,
+      'email': email,
+      'password': password,
+      'role': role,
+    };
+
+    // If additionalData is provided, merge it with registrationData
+    if (additionalData != null) {
+      // Remove password from additionalData to avoid conflicts
+      additionalData.remove('password');
+
+      // Add the rest of the data
+      registrationData.addAll(additionalData);
+    }
+
     return await ApiService.register(username, email, password, role);
   }
 

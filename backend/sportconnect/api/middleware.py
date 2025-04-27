@@ -12,6 +12,7 @@ def get_user_from_token(request):
         return AnonymousUser()
 
     token_key = auth_header[6:]  # Skip 'Token ' prefix
+    
     try:
         # Get the Django User from the token
         token = Token.objects.get(key=token_key)
@@ -19,14 +20,14 @@ def get_user_from_token(request):
         
         # Map to your custom Users model based on email
         try:
-            # Assuming the Django username is an MD5 hash of the email, 
-            # we need to find the Users by email
+            from api.models import Users
             custom_user = Users.objects.get(email=django_user.email)
             return custom_user
         except Users.DoesNotExist:
-            print(f"User with email {django_user.email} not found in Users model")
-            return AnonymousUser()
-    except Token.DoesNotExist:
+            # Return the original Django user as a fallback
+            return django_user
+    except Exception as e:
+        print(f"Error in get_user_from_token: {e}")
         return AnonymousUser()
 
 class TokenAuthMiddleware(MiddlewareMixin):

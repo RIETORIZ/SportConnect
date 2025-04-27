@@ -53,49 +53,8 @@ class _SportsFeedState extends State<SportsFeed> {
       setState(() {
         _errorMessage = 'Failed to load sports fields: ${e.toString()}';
         _isLoading = false;
-
-        // Fallback to dummy data for development if the API fails
-        if (_fields.isEmpty) {
-          _loadDummyData();
-        }
       });
     }
-  }
-
-  // Fallback dummy data for development
-  void _loadDummyData() {
-    _fields = [
-      SportsField(
-        fieldId: 1,
-        fieldName: 'Sunny Soccer Field',
-        location: 'Riyadh',
-        fieldImage: 'assets/sunny-soccer-field-picture-demo.jpg',
-        rentPricePerHour: 100.0,
-        suitableSports: 'Soccer',
-        availableForFemale: false,
-        renterId: 1,
-      ),
-      SportsField(
-        fieldId: 2,
-        fieldName: 'Basketball Court',
-        location: 'Jeddah',
-        fieldImage: 'assets/basketball.jpeg',
-        rentPricePerHour: 80.0,
-        suitableSports: 'Basketball',
-        availableForFemale: true,
-        renterId: 2,
-      ),
-      SportsField(
-        fieldId: 3,
-        fieldName: 'Tennis Court',
-        location: 'Dammam',
-        fieldImage: 'assets/tennis.jpg',
-        rentPricePerHour: 120.0,
-        suitableSports: 'Tennis',
-        availableForFemale: false,
-        renterId: 1,
-      ),
-    ];
   }
 
   void _navigateToFieldInfo(BuildContext context, SportsField field) {
@@ -162,7 +121,7 @@ class _SportsFeedState extends State<SportsFeed> {
               ? const Center(
                   child: CircularProgressIndicator(),
                 )
-              : _errorMessage.isNotEmpty && _fields.isEmpty
+              : _errorMessage.isNotEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
