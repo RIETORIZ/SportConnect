@@ -46,16 +46,38 @@ class ApiClient {
 
     if (requiresAuth) {
       final token = await _getAuthToken();
-      if (token != null) {
-        // This format exactly matches what your Django backend expects
+      if (token != null && token.isNotEmpty) {
+        // Ensure the token format is exactly as expected by Django
         headers['Authorization'] = 'Token $token';
         print("Using token for authentication: $token");
       } else {
         print("No auth token found in SharedPreferences");
+        throw Exception('Authentication required but no token available');
       }
     }
 
     return headers;
+  }
+
+  // Add a method to check and refresh token if needed
+  Future<bool> ensureValidToken() async {
+    final token = await _getAuthToken();
+    if (token == null || token.isEmpty) {
+      print("No token available");
+      return false;
+    }
+
+    try {
+      // Make a simple authenticated request to verify token
+      await get('users/profile/', requiresAuth: true);
+      return true;
+    } catch (e) {
+      print("Token validation failed: $e");
+      // Clear invalid token
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('authToken');
+      return false;
+    }
   }
 
   // Generic HTTP GET method
@@ -278,7 +300,7 @@ class ApiClient {
   }
 
   // Get all fields
-  Future<List<dynamic>> getAllFields() async {
+  Future<List<dynamic>> getAllFields({required bool showAll}) async {
     print("Getting all fields from API endpoint: $baseUrl/fields/");
     final response = await get('fields/');
     print("Fields API response: $response");

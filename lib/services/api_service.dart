@@ -151,7 +151,7 @@ class ApiService {
   static Future<List<SportsField>> getSportsFields() async {
     try {
       print("Calling API to get sports fields...");
-      final fieldsJson = await _client.getAllFields();
+      final fieldsJson = await _client.getAllFields(showAll: true);
       print("Received fields JSON: $fieldsJson");
 
       return fieldsJson
@@ -187,8 +187,17 @@ class ApiService {
   static Future<SportsField> registerField(
       Map<String, dynamic> fieldData) async {
     try {
+      // Ensure we have a valid token before proceeding
+      final isAuthenticated = await _client.ensureValidToken();
+      if (!isAuthenticated) {
+        throw Exception('You must be logged in to register a field');
+      }
+
+      print("Registering field with data: $fieldData");
+
+      // Explicitly set requiresAuth to true
       final registeredFieldJson =
-          await _client.post('fields/', data: fieldData);
+          await _client.post('fields/', data: fieldData, requiresAuth: true);
 
       // Safe parsing to handle potential null values
       if (registeredFieldJson != null) {

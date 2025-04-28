@@ -383,59 +383,59 @@ class SportsFieldViewSet(viewsets.ModelViewSet):
         
         # For renters, only show their own fields
         if hasattr(user, 'renters'):
-            return SportsFields.objects.filter(renter_id=user.renters)
+            # Check if this is a list request or a detail request
+            if self.action == 'list' and self.request.query_params.get('show_all', 'false').lower() == 'true':
+                # If explicitly requesting all fields, show all
+                return SportsFields.objects.all()
+            else:
+                # Otherwise show only their fields
+                return SportsFields.objects.filter(renter_id=user.renters)
         
         # For other users, show all fields
         return SportsFields.objects.all()
     
     def perform_create(self, serializer):
         print(f"User: {self.request.user}")
+        print(f"User type: {type(self.request.user)}")
         
         # Get the maximum field_id using aggregate
         from django.db.models import Max
         max_id = SportsFields.objects.all().aggregate(Max('field_id'))['field_id__max'] or 0
         next_id = max_id + 1
-        print(f"Using next field_id: {next_id}")
         
-        # Check if user is a string (which is happening in your case)
-        if isinstance(self.request.user, str):
-            # Log for debugging
-            print(f"User is a string: {self.request.user}")
-            
-            try:
-                # First, try to get a Django User with this username
-                django_user = User.objects.get(username=self.request.user)
-                
-                # Then try to find the corresponding Users model instance
-                # by email (assuming emails match)
-                from api.models import Users
-                custom_user = Users.objects.get(email=django_user.email)
-                
-                # Finally, get the renter associated with this user
-                renter = Renters.objects.get(user_id=custom_user)
-                
-                # Save with the found renter and the new ID
-                serializer.save(field_id=next_id, renter_id=renter)
-                return
-                
-            except Exception as e:
-                print(f"Error finding user/renter: {e}")
-                # Save with new ID but without a renter
-                serializer.save(field_id=next_id, renter_id=None)
-                return
-        
-        # Existing logic for when user is a proper model instance
         try:
-            # If user is a proper Users instance
-            if isinstance(self.request.user, Users):
-                renter = Renters.objects.get(user_id=self.request.user)
-                serializer.save(field_id=next_id, renter_id=renter)
-            else:
-                # Save with new ID but without a renter
-                serializer.save(field_id=next_id, renter_id=None)
+            # Get renter_id from the request data
+            renter_id = self.request.data.get('renter_id')
+            print(f"renter_id from request data: {renter_id}")
+            
+            if renter_id:
+                from api.models import Users, Renters
+                try:
+                    # First try to get the user
+                    user = Users.objects.get(user_id=renter_id)
+                    print(f"Found user with ID: {user.user_id}")
+                    
+                    # Then try to get the renter
+                    try:
+                        renter = Renters.objects.get(user_id=user)
+                        print(f"Found renter for user_id: {renter_id}")
+                        
+                        # Save with this renter
+                        serializer.save(field_id=next_id, renter_id=renter)
+                        return
+                    except Renters.DoesNotExist:
+                        print(f"No renter found for user_id: {renter_id}")
+                except Users.DoesNotExist:
+                    print(f"No user found with user_id: {renter_id}")
+            
+            # If we get here, we couldn't find a renter or no renter_id was provided
+            print("Saving with no renter_id")
+            serializer.save(field_id=next_id, renter_id=None)
+            
         except Exception as e:
             print(f"Error in perform_create: {e}")
-            # Save with new ID but without a renter
+            import traceback
+            traceback.print_exc()
             serializer.save(field_id=next_id, renter_id=None)
 
 class MatchViewSet(viewsets.ModelViewSet):

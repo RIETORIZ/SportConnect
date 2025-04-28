@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../services/api_service.dart';
 
 class RegisterSportFieldPage extends StatefulWidget {
@@ -52,6 +53,17 @@ class _RegisterSportFieldPageState extends State<RegisterSportFieldPage> {
     });
 
     try {
+      // Check if user is logged in
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('authToken');
+
+      if (token == null || token.isEmpty) {
+        throw Exception('You must be logged in to register a field');
+      }
+
+      // Get current user profile to get the renter_id
+      final userProfile = await ApiService.getUserProfile();
+
       // Prepare field data
       final newField = {
         'field_name': name,
@@ -61,32 +73,24 @@ class _RegisterSportFieldPageState extends State<RegisterSportFieldPage> {
         'suitable_sports': sports,
         'available_for_female': _availableForFemale,
         'comments': _commentsController.text.trim(),
+        // Include the user_id explicitly as renter_id
+        // The backend will use this to look up the renter by user_id
+        'renter_id': userProfile['user_id'],
       };
 
-      // Call API to register field and handle the response properly
-      try {
-        await ApiService.registerField(newField);
+      // Call API to register field
+      await ApiService.registerField(newField);
 
-        // Show success message
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Field registered successfully!')),
-          );
-          Navigator.pop(context);
-        }
-      } catch (e) {
-        // More specific error handling for registration
-        print("API error: $e");
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to register field: $e')),
-          );
-        }
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Field registered successfully!')),
+        );
+        Navigator.pop(context, true); // Return true to indicate success
       }
     } catch (e) {
-      // This catches errors in getting user profile or other setup steps
-      print("Setup error: $e");
-      // Show error message
+      // Error handling
+      print("API error: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to register field: $e')),

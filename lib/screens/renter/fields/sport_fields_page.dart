@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'register_sport_field_page.dart';
 import '../../../services/api_service.dart';
+import '../../../services/api_client.dart'; // Change this import
 
 class SportFieldsPage extends StatefulWidget {
   const SportFieldsPage({super.key});
@@ -24,16 +25,13 @@ class _SportFieldsPageState extends State<SportFieldsPage> {
   Future<List<dynamic>> _fetchFields() async {
     try {
       print("Fetching sports fields...");
-      final fields = await ApiService.getSportsFields();
+      final apiClient = ApiClient();
+      final fields = await apiClient.getAllFields(showAll: true);
+
       print("Fetched ${fields.length} fields");
-      // Log the first field if available
-      if (fields.isNotEmpty) {
-        print("First field: ${fields[0].fieldName}");
-      }
       return fields;
     } catch (e) {
       print('Error fetching fields: $e');
-      // Show the error to the user
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to load fields: $e')),
       );

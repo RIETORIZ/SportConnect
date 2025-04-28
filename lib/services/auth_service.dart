@@ -30,7 +30,9 @@ class AuthService {
       registrationData.addAll(additionalData);
     }
 
-    return await ApiService.register(username, email, password, role);
+    // FIX: Pass the complete registrationData to the API
+    return await ApiService.register(username, email, password, role,
+        additionalData: registrationData);
   }
 
   // Logout the current user
