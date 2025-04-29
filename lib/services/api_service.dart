@@ -441,6 +441,7 @@ class ApiService {
       {String? sport,
       String? region,
       String? experienceLevel,
+      int? teamId, // Add this parameter
       int numResults = 5}) async {
     try {
       // Build query parameters
@@ -448,6 +449,8 @@ class ApiService {
         if (sport != null) 'sport': sport,
         if (region != null) 'region': region,
         if (experienceLevel != null) 'experience_level': experienceLevel,
+        if (teamId != null)
+          'team_id': teamId.toString(), // Add team_id to query
         'num_results': numResults.toString(),
       };
 

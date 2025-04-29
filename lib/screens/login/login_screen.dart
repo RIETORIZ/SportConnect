@@ -97,6 +97,7 @@ class _LoginScreenState extends State<LoginScreen>
     });
 
     try {
+      /* Comment out the development shortcuts for now
       // For development/testing, allow use of the existing shortcuts
       if (password == "rose") {
         if (email == "adminP") {
@@ -110,6 +111,7 @@ class _LoginScreenState extends State<LoginScreen>
           return;
         }
       }
+      */
 
       // Call the authentication service
       final response = await AuthService.login(email, password);

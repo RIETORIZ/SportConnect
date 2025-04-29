@@ -124,8 +124,10 @@ class SportsFields(models.Model):
 class Matches(models.Model):
     match_id = models.AutoField(primary_key=True)
     field_id = models.ForeignKey(SportsFields, on_delete=models.CASCADE, null=False, db_column='field_id')
-    team1_id = models.ForeignKey(Teams, related_name='team1_matches', on_delete=models.CASCADE, null=False, db_column='team1_id')
-    team2_id = models.ForeignKey(Teams, related_name='team2_matches', on_delete=models.CASCADE, null=False, db_column='team2_id')
+    team1_id = models.ForeignKey(Teams, related_name='team1_matches', on_delete=models.CASCADE, 
+                                 null=True, blank=True, db_column='team1_id')  # Make nullable
+    team2_id = models.ForeignKey(Teams, related_name='team2_matches', on_delete=models.CASCADE, 
+                                 null=True, blank=True, db_column='team2_id')  # Already nullable
     match_date = models.DateField(null=False)
     match_time = models.TimeField(null=False)
 
@@ -133,7 +135,9 @@ class Matches(models.Model):
         db_table = 'matches'
 
     def __str__(self):
-        return f"{self.match_date} - {self.team1_id.team_name} vs {self.team2_id.team_name}"
+        team1_name = self.team1_id.team_name if self.team1_id else "TBD"
+        team2_name = self.team2_id.team_name if self.team2_id else "TBD"
+        return f"{self.match_date} - {team1_name} vs {team2_name}"
 
 class TrainingSessions(models.Model):
     session_id = models.AutoField(primary_key=True)

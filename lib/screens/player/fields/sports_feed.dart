@@ -31,17 +31,19 @@ class _SportsFeedState extends State<SportsFeed> {
     });
 
     try {
-      // Try to load recommended fields first
-      List<dynamic> recommendedFieldsJson =
-          await FieldService.getRecommendedFields();
+      List<dynamic> fieldsJson = [];
 
-      // If no recommendations are available, get all fields
-      if (recommendedFieldsJson.isEmpty) {
-        recommendedFieldsJson = await FieldService.getSportsFields();
+      try {
+        // Try to load recommended fields first
+        fieldsJson = await FieldService.getRecommendedFields();
+      } catch (e) {
+        print('Failed to get recommended fields: $e');
+        // If that fails, get all fields instead
+        fieldsJson = await FieldService.getSportsFields();
       }
 
       // Convert JSON to SportsField objects
-      final loadedFields = recommendedFieldsJson
+      final loadedFields = fieldsJson
           .map((fieldJson) => SportsField.fromJson(fieldJson))
           .toList();
 
@@ -108,11 +110,11 @@ class _SportsFeedState extends State<SportsFeed> {
                   }).toList(),
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: _loadSportsFields,
-                tooltip: 'Refresh fields',
-              ),
+              //IconButton(
+              //icon: const Icon(Icons.refresh),
+              //onPressed: _loadSportsFields,
+              //tooltip: 'Refresh fields',
+              //),
             ],
           ),
         ),

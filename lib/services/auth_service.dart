@@ -6,7 +6,10 @@ class AuthService {
   // Login with email and password
   static Future<Map<String, dynamic>> login(
       String email, String password) async {
-    return await ApiService.login(email, password);
+    print("AuthService: Attempting to login with email: $email");
+    var result = await ApiService.login(email, password);
+    print("AuthService: Login successful, received response: $result");
+    return result;
   }
 
   // Register a new user with role-specific data

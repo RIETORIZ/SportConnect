@@ -161,10 +161,13 @@ class LoginView(generics.GenericAPIView):
         user_type = 'User'
         if hasattr(user, 'players'):
             user_type = 'Player'
+            print(f"User has player profile")
         elif hasattr(user, 'coaches'):
             user_type = 'Coach'
+            print(f"User has coach profile")
         elif hasattr(user, 'renters'):
             user_type = 'Renter'
+            print(f"User has renter profile")
         
         print(f"User type: {user_type}")
         
@@ -443,6 +446,28 @@ class MatchViewSet(viewsets.ModelViewSet):
     serializer_class = MatchSerializer
     permission_classes = [IsAuthenticated]
     
+    def perform_create(self, serializer):
+        # Get the maximum match_id using aggregate
+        from django.db.models import Max
+        max_id = Matches.objects.all().aggregate(Max('match_id'))['match_id__max'] or 0
+        next_id = max_id + 1
+        
+        # Get current user's team if available and needed
+        user = self.request.user
+        user_team = None
+        
+        # If team1_id is not provided, try to use the current user's team
+        if 'team1_id' not in serializer.validated_data and hasattr(user, 'players'):
+            player_id = user.players.user_id_id
+            player_teams = Teams.objects.filter(player_id__contains=[player_id])
+            if player_teams.exists():
+                user_team = player_teams.first()
+        
+        # Save with the next ID and optional team
+        if user_team and 'team1_id' not in serializer.validated_data:
+            serializer.save(match_id=next_id, team1_id=user_team)
+        else:
+            serializer.save(match_id=next_id)
     def get_queryset(self):
         user = self.request.user
         
@@ -751,15 +776,34 @@ class TeamMatchmakingView(APIView):
         sport = request.query_params.get('sport', None)
         region = request.query_params.get('region', None)
         experience_level = request.query_params.get('experience_level', None)
+        team_id = request.query_params.get('team_id', None)  # Add this parameter
         num_results = int(request.query_params.get('num_results', 5))
         
-        # Use the team_matchmaking utility function
-        match_results = team_matchmaking(
-            sport=sport,
-            region=region,
-            experience_level=experience_level,
-            num_results=num_results
-        )
+        # If team_id is provided, use it to find suitable matches
+        if team_id is not None:
+            try:
+                team = Teams.objects.get(team_id=team_id)
+                # Use the team_matchmaking utility function with specific team
+                match_results = team_matchmaking(
+                    sport=sport or team.sport,
+                    region=region or team.region,
+                    experience_level=experience_level,
+                    num_results=num_results,
+                    specific_team=team  # Pass the specific team
+                )
+            except Teams.DoesNotExist:
+                return Response(
+                    {'detail': f'Team with ID {team_id} not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        else:
+            # Use the general team_matchmaking function
+            match_results = team_matchmaking(
+                sport=sport,
+                region=region,
+                experience_level=experience_level,
+                num_results=num_results
+            )
         
         # Prepare the response data
         response_data = []

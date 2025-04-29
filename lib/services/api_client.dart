@@ -197,51 +197,62 @@ class ApiClient {
 
   // Authentication methods
 
-  Future<Map<String, dynamic>> login(String email, String password) async {
-    final url = Uri.parse('$baseUrl/auth/login/');
-    final headers = await _getHeaders(requiresAuth: false);
-
+  static Future<Map<String, dynamic>> login(
+      String email, String password) async {
     try {
-      // Ensure the body structure matches exactly what Django expects
-      final response = await _client.post(
-        url,
-        headers: headers,
+      print("ApiService: Calling login API with email: $email");
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/login/'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
         body: jsonEncode({
           'email': email,
           'password': password,
         }),
       );
 
-      print("Login response status: ${response.statusCode}");
-      print("Login response body length: ${response.body.length}");
-      print("Login response body: ${response.body}");
+      print("ApiService: Login response status: ${response.statusCode}");
+      print("ApiService: Login response body: ${response.body}");
 
-      final responseData = _handleResponse(response);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        // Success case
+        final responseData = jsonDecode(response.body);
 
-      // Save auth token if present
-      if (responseData != null && responseData.containsKey('token')) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('authToken', responseData['token']);
-        print("Saved auth token: ${responseData['token']}");
+        // Save auth token if present
+        if (responseData != null && responseData.containsKey('token')) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('authToken', responseData['token']);
+          print("ApiService: Saved auth token: ${responseData['token']}");
 
-        // Also save logged-in status for convenience
-        await prefs.setBool('isLoggedIn', true);
+          // Also save logged-in status for convenience
+          await prefs.setBool('isLoggedIn', true);
 
-        // Save email for future reference
-        await prefs.setString('loggedInEmail', email);
+          // Save email for future reference
+          await prefs.setString('loggedInEmail', email);
 
-        // Save user role if available
-        if (responseData.containsKey('user_type')) {
-          await prefs.setString(
-              'userRole', responseData['user_type'].toString().toLowerCase());
-          print("Saved user role: ${responseData['user_type']}");
+          // Save user role if available
+          if (responseData.containsKey('user_type')) {
+            await prefs.setString(
+                'userRole', responseData['user_type'].toString().toLowerCase());
+            print("ApiService: Saved user role: ${responseData['user_type']}");
+          }
         }
-      }
 
-      return responseData;
+        return responseData;
+      } else {
+        // Error case
+        final responseData = jsonDecode(response.body);
+        final errorMessage = responseData.containsKey('detail')
+            ? responseData['detail']
+            : 'Request failed with status: ${response.statusCode}';
+        throw Exception(errorMessage);
+      }
     } catch (e) {
-      print("Login error in api_client: $e");
-      throw Exception('Network error: $e');
+      print('ApiService: Login error: $e');
+      throw Exception('Failed to login: $e');
     }
   }
 

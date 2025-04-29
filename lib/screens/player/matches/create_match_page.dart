@@ -180,12 +180,6 @@ class _CreateMatchPageState extends State<CreateMatchPage> {
       return;
     }
 
-    // If enemy team is required but not selected
-    if (_inviteEnemyTeam && _selectedEnemyTeam == null) {
-      _navigateToSearchEnemyTeam(context);
-      return;
-    }
-
     // Get field ID
     final fieldId = _availableFields.firstWhere(
       (field) => field['name'] == _selectedField,
@@ -204,7 +198,20 @@ class _CreateMatchPageState extends State<CreateMatchPage> {
         'match_time': _timeController.text,
         'match_type': _selectedMatchType,
         'sport': _selectedSport,
+        // Don't include team1_id automatically - it's now optional
       };
+
+      // If you have the current user's team and want to include it, you can:
+      try {
+        final userTeamId = await getCurrentUserTeamId();
+        if (userTeamId != null) {
+          matchData['team1_id'] = userTeamId;
+        }
+      } catch (e) {
+        print(
+            'No team found for current user, continuing without team1_id: $e');
+        // Continue without team1_id - it's optional now
+      }
 
       // If enemy team is selected, add its info
       if (_selectedEnemyTeam != null) {
@@ -234,6 +241,25 @@ class _CreateMatchPageState extends State<CreateMatchPage> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  // Update this method to return null if no teams are found
+  Future<int?> getCurrentUserTeamId() async {
+    try {
+      // Get the user's teams
+      final teams = await ApiService.getUserTeams();
+
+      // If the user has teams, return the ID of the first one
+      if (teams.isNotEmpty) {
+        return teams.first.teamId;
+      }
+
+      // If no teams found, return null instead of throwing an exception
+      return null;
+    } catch (e) {
+      print('Error getting current user team ID: $e');
+      return null;
     }
   }
 

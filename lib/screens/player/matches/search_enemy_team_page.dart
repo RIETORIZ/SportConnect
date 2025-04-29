@@ -41,10 +41,13 @@ class _SearchEnemyTeamPageState extends State<SearchEnemyTeamPage> {
     });
 
     try {
+      // Modify this to use a specific endpoint to search by team ID
       final results = await ApiService.getTeamMatches(
         sport: widget.sport,
         region: widget.region,
         experienceLevel: _selectedLevel,
+        // Add team_id parameter
+        // teamId: widget.teamId, // If you're passing team ID from previous screen
       );
 
       setState(() {

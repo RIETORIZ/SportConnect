@@ -103,14 +103,18 @@ class SportsFieldSerializer(serializers.ModelSerializer):
 
 class MatchSerializer(serializers.ModelSerializer):
     field_name = serializers.CharField(source='field_id.field_name', read_only=True)
-    team1_name = serializers.CharField(source='team1_id.team_name', read_only=True)
-    team2_name = serializers.CharField(source='team2_id.team_name', read_only=True)
+    team1_name = serializers.CharField(source='team1_id.team_name', read_only=True, required=False)
+    team2_name = serializers.CharField(source='team2_id.team_name', read_only=True, required=False)
     
     class Meta:
         model = Matches
         fields = ['match_id', 'field_id', 'team1_id', 'team2_id', 'match_date', 
                  'match_time', 'field_name', 'team1_name', 'team2_name']
         read_only_fields = ['match_id']
+        extra_kwargs = {
+            'team1_id': {'required': False},
+            'team2_id': {'required': False}
+        }
 
 class TrainingSessionSerializer(serializers.ModelSerializer):
     coach_name = serializers.CharField(source='coach_id.user_id.username', read_only=True)
